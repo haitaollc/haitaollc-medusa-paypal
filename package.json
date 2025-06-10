@@ -1,8 +1,8 @@
 {
-  "name": "my-plugin",
+  "name": "@alphabite/medusa-paypal",
   "version": "0.0.1",
-  "description": "A starter for Medusa plugins.",
-  "author": "Medusa (https://medusajs.com)",
+  "description": "Alphabite's Medusa Paypal Plugin",
+  "author": "Alphabite (https://alphabite.io)",
   "license": "MIT",
   "files": [
     ".medusa/server"
@@ -13,14 +13,22 @@
     "./.medusa/server/src/modules/*": "./.medusa/server/src/modules/*/index.js",
     "./modules/*": "./.medusa/server/src/modules/*/index.js",
     "./providers/*": "./.medusa/server/src/providers/*/index.js",
-    "./*": "./.medusa/server/src/*.js"
+    "./*": "./.medusa/server/src/*.js",
+    "./admin": {
+      "import": "./.medusa/server/src/admin/index.mjs",
+      "require": "./.medusa/server/src/admin/index.js",
+      "default": "./.medusa/server/src/admin/index.js"
+    }
   },
   "keywords": [
     "medusa",
     "plugin",
     "medusa-plugin-other",
     "medusa-plugin",
-    "medusa-v2"
+    "medusa-v2",
+    "medusa-alphabite",
+    "medusa-alphabite-plugin",
+    "medusa-alphabite-paypal-plugin"
   ],
   "scripts": {
     "build": "medusa plugin:build",
@@ -28,13 +36,13 @@
     "prepublishOnly": "medusa plugin:build"
   },
   "devDependencies": {
-    "@medusajs/admin-sdk": "2.4.0",
-    "@medusajs/cli": "2.4.0",
-    "@medusajs/framework": "2.4.0",
-    "@medusajs/medusa": "2.4.0",
-    "@medusajs/test-utils": "2.4.0",
+    "@medusajs/admin-sdk": "2.8.3",
+    "@medusajs/cli": "2.8.3",
+    "@medusajs/framework": "2.8.3",
+    "@medusajs/medusa": "2.8.3",
+    "@medusajs/test-utils": "2.8.3",
     "@medusajs/ui": "4.0.4",
-    "@medusajs/icons": "2.4.0",
+    "@medusajs/icons": "2.8.3",
     "@mikro-orm/cli": "6.4.3",
     "@mikro-orm/core": "6.4.3",
     "@mikro-orm/knex": "6.4.3",
@@ -55,13 +63,13 @@
     "yalc": "^1.0.0-pre.53"
   },
   "peerDependencies": {
-    "@medusajs/admin-sdk": "2.4.0",
-    "@medusajs/cli": "2.4.0",
-    "@medusajs/framework": "2.4.0",
-    "@medusajs/test-utils": "2.4.0",
-    "@medusajs/medusa": "2.4.0",
+    "@medusajs/admin-sdk": "2.8.3",
+    "@medusajs/cli": "2.8.3",
+    "@medusajs/framework": "2.8.3",
+    "@medusajs/test-utils": "2.8.3",
+    "@medusajs/medusa": "2.8.3",
     "@medusajs/ui": "4.0.3",
-    "@medusajs/icons": "2.4.0",
+    "@medusajs/icons": "2.8.3",
     "@mikro-orm/cli": "6.4.3",
     "@mikro-orm/core": "6.4.3",
     "@mikro-orm/knex": "6.4.3",
@@ -73,5 +81,8 @@
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
+  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610",
+  "publishConfig": {
+    "access": "public"
+  }
 }
