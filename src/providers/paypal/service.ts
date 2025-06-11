@@ -24,9 +24,8 @@ import {
   WebhookActionResult,
 } from "@medusajs/framework/types";
 import { CaptureStatus, Order } from "@paypal/paypal-server-sdk";
-
-import { PaypalService } from "./paypal-core";
 import { WebhookPayload } from "./types";
+import { PaypalService } from "./paypal-core";
 
 export interface PaypalPaymentError {
   code: string;
@@ -50,7 +49,6 @@ type InjectedDependencies = {
 
 export default class PaypalModuleService extends AbstractPaymentProvider<Options> {
   static identifier = "paypal";
-
   protected logger_: Logger;
   public options_: Options;
   public client: PaypalService;
