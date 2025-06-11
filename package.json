@@ -28,7 +28,12 @@
     "medusa-v2",
     "medusa-alphabite",
     "medusa-alphabite-plugin",
-    "medusa-alphabite-paypal-plugin"
+    "medusa-alphabite-paypal-plugin",
+    "medusa-plugin-payment",
+    "medusa-plugin-integration",
+    "medusa-paypal-payment",
+    "payment",
+    "paypal"
   ],
   "scripts": {
     "build": "medusa plugin:build",

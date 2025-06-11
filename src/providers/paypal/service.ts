@@ -26,7 +26,7 @@ import {
 import { CaptureStatus, Order } from "@paypal/paypal-server-sdk";
 
 import { PaypalService } from "./paypal-core";
-import { WebhookPayload } from "./types/paypal";
+import { WebhookPayload } from "./types";
 
 export interface PaypalPaymentError {
   code: string;
@@ -39,7 +39,7 @@ export interface PaypalPaymentError {
 type Options = {
   clientId: string;
   clientSecret: string;
-  webhookId: string;
+  webhookId?: string;
   isSandbox: boolean;
 };
 
@@ -52,8 +52,8 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   static identifier = "paypal";
 
   protected logger_: Logger;
-  protected options_: Options;
-  protected client: PaypalService;
+  public options_: Options;
+  public client: PaypalService;
   protected baseUrl: string;
   protected paymentModuleService_: any;
 
@@ -78,7 +78,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
 
     this.logger_ = container.logger;
     this.options_ = options;
-    this.baseUrl = process.env.PAYPAL_SANDBOX
+    this.baseUrl = this.options_.isSandbox
       ? "https://api-m.sandbox.paypal.com"
       : "https://api-m.paypal.com";
     this.paymentModuleService_ = container.paymentModuleService;
@@ -86,6 +86,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
       clientId: this.options_.clientId,
       clientSecret: this.options_.clientSecret,
       isSandbox: this.options_.isSandbox,
+      paypalWebhookId: this.options_.webhookId,
     });
   }
 

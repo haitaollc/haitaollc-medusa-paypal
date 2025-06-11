@@ -10,21 +10,32 @@ import {
   PaymentsController,
   Refund,
 } from "@paypal/paypal-server-sdk";
-
-import { MedusaRequest } from "@medusajs/framework";
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 
 export class PaypalService {
   private client: Client;
   private ordersController: OrdersController;
   private paymentsController: PaymentsController;
   private authController: OAuthAuthorizationController;
-  private axios = axios.create({
-    baseURL: process.env.PAYPAL_SANDBOX === "true" ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com",
-  });
+  private axios: AxiosInstance;
+  private clientIdEnv: string;
+  private clientSecretEnv: string;
+  private paypalWebhookIdEnv: string | undefined;
 
-  constructor({ clientId, clientSecret, isSandbox }: { clientId: string; clientSecret: string; isSandbox: boolean }) {
-    const environment = isSandbox ? Environment.Sandbox : Environment.Production;
+  constructor({
+    clientId,
+    clientSecret,
+    isSandbox,
+    paypalWebhookId,
+  }: {
+    clientId: string;
+    clientSecret: string;
+    isSandbox: boolean;
+    paypalWebhookId?: string;
+  }) {
+    const environment = isSandbox
+      ? Environment.Sandbox
+      : Environment.Production;
 
     this.client = new Client({
       clientCredentialsAuthCredentials: {
@@ -43,6 +54,15 @@ export class PaypalService {
         },
       },
     });
+
+    this.axios = axios.create({
+      baseURL: isSandbox
+        ? "https://api-m.sandbox.paypal.com"
+        : "https://api-m.paypal.com",
+    });
+    this.clientIdEnv = clientId;
+    this.clientSecretEnv = clientSecret;
+    this.paypalWebhookIdEnv = paypalWebhookId;
 
     this.ordersController = new OrdersController(this.client);
     this.paymentsController = new PaymentsController(this.client);
@@ -82,9 +102,9 @@ export class PaypalService {
 
   async getAccessToken(): Promise<string> {
     try {
-      const authorization = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString(
-        "base64"
-      );
+      const authorization = Buffer.from(
+        `${this.clientIdEnv}:${this.clientSecretEnv}`
+      ).toString("base64");
 
       const authRes = await this.authController.requestToken({
         authorization: `Basic ${authorization}`,
@@ -155,7 +175,7 @@ export class PaypalService {
         transmission_id: headers["paypal-transmission-id"],
         transmission_sig: headers["paypal-transmission-sig"],
         transmission_time: headers["paypal-transmission-time"],
-        webhook_id: process.env.PAYPAL_WEBHOOK_ID ?? "",
+        webhook_id: this.paypalWebhookIdEnv || "",
         webhook_event: body,
       },
       {
