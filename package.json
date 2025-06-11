@@ -35,6 +35,10 @@
     "dev": "medusa plugin:develop",
     "prepublishOnly": "medusa plugin:build"
   },
+  "dependencies": {
+    "@paypal/paypal-server-sdk": "1.0.0",
+    "axios": "^1.8.1"
+  },
   "devDependencies": {
     "@medusajs/admin-sdk": "2.8.3",
     "@medusajs/cli": "2.8.3",
