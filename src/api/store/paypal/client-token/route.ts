@@ -51,5 +51,5 @@ export const POST = async (
 
   const data = await response.json();
 
-  return res.status(201).json({ clientToken: data.client_token });
+  return res.status(201).json({ client_token: data.client_token });
 };

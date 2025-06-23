@@ -16,6 +16,7 @@ import {
   GetPaymentStatusOutput,
   InitiatePaymentInput,
   InitiatePaymentOutput,
+  IPaymentModuleService,
   Logger,
   RefundPaymentInput,
   RefundPaymentOutput,
@@ -26,6 +27,7 @@ import {
 import { CaptureStatus, Order } from "@paypal/paypal-server-sdk";
 import { WebhookPayload } from "./types";
 import { PaypalService } from "./paypal-core";
+// import { EntityManager } from "@mikro-orm/knex";
 
 export interface PaypalPaymentError {
   code: string;
@@ -45,6 +47,8 @@ type Options = {
 type InjectedDependencies = {
   logger: Logger;
   paymentModuleService: any;
+  // entityManager: EntityManager;
+  // paymentModuleService: IPaymentModuleService;
 };
 
 export default class PaypalModuleService extends AbstractPaymentProvider<Options> {
@@ -53,7 +57,9 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   public options_: Options;
   public client: PaypalService;
   protected baseUrl: string;
+  // protected paymentModuleService_: IPaymentModuleService;
   protected paymentModuleService_: any;
+  // protected entityManager_: EntityManager;
 
   static validateOptions(options: Record<string, any>): void {
     if (!options.clientId) {
@@ -86,6 +92,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
       isSandbox: this.options_.isSandbox,
       paypalWebhookId: this.options_.webhookId,
     });
+    // this.entityManager_ = container.entityManager;
   }
 
   async capturePayment(
@@ -159,6 +166,11 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
     const amount = input.data.amount as number;
     const currencyCode = input.data.currency_code as string;
     const orderId = paypalData?.id as string;
+
+    console.log(
+      "__________Authorize input data__________",
+      JSON.stringify(input, null, 2)
+    );
 
     if (!orderId) {
       throw new MedusaError(
@@ -340,10 +352,13 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   async initiatePayment(
     input: InitiatePaymentInput
   ): Promise<InitiatePaymentOutput> {
-    // console.log(">>>>>>>Initiate payment<<<<<");
-
     try {
       const { amount, currency_code, context, data } = input;
+
+      // console.log(
+      //   "_____________________________INITIATE PAYMENT INPUT__________________________",
+      //   JSON.stringify(input, null, 2)
+      // );
 
       const order = await this.client.createOrder({
         amount: Number(amount),
@@ -351,8 +366,19 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
         sessionId: context?.idempotency_key,
       });
 
+      // console.log(
+      //   "______________CART_ID__________________________",
+      //   input?.data?.cart_id
+      // );
+
+      // const cart = await this.entityManager_.findOne("cart", {
+      //   id: input?.data?.cart_id,
+      // });
+      // console.log("______________CART__________________________", cart);
+
       return {
-        data: { ...data, ...order, amount, currency_code },
+        data: { ...data, ...order, ...context, amount, currency_code },
+
         id: order.id!,
       };
     } catch (error) {
