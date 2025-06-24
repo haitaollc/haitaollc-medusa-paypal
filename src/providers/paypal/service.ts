@@ -26,7 +26,7 @@ import {
 } from "@medusajs/framework/types";
 import { CaptureStatus, Order } from "@paypal/paypal-server-sdk";
 import { WebhookPayload } from "./types";
-import { PaypalService } from "./paypal-core";
+import { PaypalCreateOrderInput, PaypalService } from "./paypal-core";
 // import { EntityManager } from "@mikro-orm/knex";
 
 export interface PaypalPaymentError {
@@ -40,8 +40,10 @@ export interface PaypalPaymentError {
 type Options = {
   clientId: string;
   clientSecret: string;
-  webhookId?: string;
   isSandbox: boolean;
+  webhookId?: string;
+  includeShippingData?: boolean;
+  includeCustomerData?: boolean;
 };
 
 type InjectedDependencies = {
@@ -50,6 +52,14 @@ type InjectedDependencies = {
   // entityManager: EntityManager;
   // paymentModuleService: IPaymentModuleService;
 };
+
+interface InitiatePaymentInputCustom
+  extends Omit<InitiatePaymentInput, "data"> {
+  data?: Pick<PaypalCreateOrderInput, "items" | "shipping_info" | "email">;
+}
+
+interface AuthorizePaymentInputData
+  extends Pick<PaypalCreateOrderInput, "items" | "shipping_info" | "email"> {}
 
 export default class PaypalModuleService extends AbstractPaymentProvider<Options> {
   static identifier = "paypal";
@@ -79,7 +89,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
 
   constructor(container: InjectedDependencies, options: Options) {
     super(container, options);
-
+    // console.log(">>>>>>>>>>>>>>>>Constructor Container", container);
     this.logger_ = container.logger;
     this.options_ = options;
     this.baseUrl = this.options_.isSandbox
@@ -91,6 +101,8 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
       clientSecret: this.options_.clientSecret,
       isSandbox: this.options_.isSandbox,
       paypalWebhookId: this.options_.webhookId,
+      includeShippingData: this.options_.includeShippingData,
+      includeCustomerData: this.options_.includeCustomerData,
     });
     // this.entityManager_ = container.entityManager;
   }
@@ -161,6 +173,8 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
       );
     }
 
+    const data = input.data as unknown as AuthorizePaymentInputData | undefined;
+
     let paypalData = input.data as Order | undefined;
 
     const amount = input.data.amount as number;
@@ -217,6 +231,9 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
           amount: Number(amount),
           currency: currencyCode,
           sessionId: input.context?.idempotency_key,
+          items: data?.items,
+          shipping_info: data?.shipping_info,
+          email: data?.email,
         });
 
         if (!captureData) {
@@ -276,6 +293,9 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
           amount: Number(captureData?.amount?.value),
           currency: captureData?.amount?.currencyCode!,
           sessionId: input.context?.idempotency_key,
+          items: data?.items,
+          shipping_info: data?.shipping_info,
+          email: data?.email,
         });
 
         // console.log(">>>>> STEP 4.2 - NEW ORDER CREATED", newOrder);
@@ -350,31 +370,19 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   }
 
   async initiatePayment(
-    input: InitiatePaymentInput
+    input: InitiatePaymentInputCustom
   ): Promise<InitiatePaymentOutput> {
     try {
       const { amount, currency_code, context, data } = input;
-
-      // console.log(
-      //   "_____________________________INITIATE PAYMENT INPUT__________________________",
-      //   JSON.stringify(input, null, 2)
-      // );
 
       const order = await this.client.createOrder({
         amount: Number(amount),
         currency: currency_code,
         sessionId: context?.idempotency_key,
+        items: data?.items,
+        shipping_info: data?.shipping_info,
+        email: data?.email,
       });
-
-      // console.log(
-      //   "______________CART_ID__________________________",
-      //   input?.data?.cart_id
-      // );
-
-      // const cart = await this.entityManager_.findOne("cart", {
-      //   id: input?.data?.cart_id,
-      // });
-      // console.log("______________CART__________________________", cart);
 
       return {
         data: { ...data, ...order, ...context, amount, currency_code },

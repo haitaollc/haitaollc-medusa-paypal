@@ -9,8 +9,33 @@ import {
   OrdersController,
   PaymentsController,
   Refund,
+  Item,
+  ShippingDetails,
+  OrderApplicationContextShippingPreference,
+  OrderApplicationContextUserAction,
+  FulfillmentType,
 } from "@paypal/paypal-server-sdk";
 import axios, { AxiosInstance } from "axios";
+import { CartAddressDTO, CartLineItemDTO } from "@medusajs/framework/types";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
+
+interface CartItem {
+  name: string;
+  thumbnail?: string;
+  variant_title?: string;
+  product_id?: string;
+  variant_id?: string;
+  quantity: number;
+}
+
+export interface PaypalCreateOrderInput {
+  amount: number;
+  currency: string;
+  sessionId?: string;
+  shipping_info?: CartAddressDTO;
+  items?: CartLineItemDTO[];
+  email?: string;
+}
 
 export class PaypalService {
   private client: Client;
@@ -21,17 +46,23 @@ export class PaypalService {
   private clientIdEnv: string;
   private clientSecretEnv: string;
   private paypalWebhookIdEnv: string | undefined;
+  private includeShippingData: boolean | undefined;
+  private includeCustomerData: boolean | undefined;
 
   constructor({
     clientId,
     clientSecret,
     isSandbox,
     paypalWebhookId,
+    includeCustomerData,
+    includeShippingData,
   }: {
     clientId: string;
     clientSecret: string;
     isSandbox: boolean;
     paypalWebhookId?: string;
+    includeShippingData?: boolean;
+    includeCustomerData?: boolean;
   }) {
     const environment = isSandbox
       ? Environment.Sandbox
@@ -67,18 +98,64 @@ export class PaypalService {
     this.ordersController = new OrdersController(this.client);
     this.paymentsController = new PaymentsController(this.client);
     this.authController = new OAuthAuthorizationController(this.client);
+
+    this.includeCustomerData = includeCustomerData;
+    this.includeShippingData = includeShippingData;
   }
 
   async createOrder({
     amount,
     currency,
     sessionId,
-  }: {
-    amount: number;
-    currency: string;
-    sessionId?: string;
-  }): Promise<Order> {
+    shipping_info,
+    items,
+    email,
+  }: PaypalCreateOrderInput): Promise<Order> {
     const ordersController = new OrdersController(this.client);
+
+    const paypalItems: Item[] = items
+      ? items.map((item) => ({
+          name: item.title,
+          quantity: item.quantity.toString(),
+          unitAmount: {
+            currencyCode: currency,
+            value: item.unit_price.toString(),
+          },
+        }))
+      : [];
+    const isItems = paypalItems.length > 0;
+
+    const parsed_phone_number = shipping_info?.phone
+      ? parsePhoneNumberFromString(shipping_info.phone)
+      : null;
+
+    const paypalShipping: ShippingDetails = shipping_info
+      ? {
+          ...(this.includeCustomerData && {
+            name: {
+              fullName: `${shipping_info.first_name} ${shipping_info.last_name}`,
+            },
+            emailAddress: email,
+            ...(parsed_phone_number && {
+              phoneNumber: {
+                countryCode: parsed_phone_number.countryCallingCode,
+                nationalNumber: parsed_phone_number.nationalNumber,
+              },
+            }),
+          }),
+          ...(this.includeShippingData && {
+            address: {
+              countryCode: shipping_info?.country_code!,
+              postalCode: shipping_info?.postal_code,
+              adminArea1: shipping_info?.province,
+              adminArea2: shipping_info?.city,
+              addressLine1: shipping_info?.address_1,
+            },
+          }),
+          type: FulfillmentType.Shipping,
+        }
+      : {};
+    const isShippingData = Object.keys(paypalShipping).length > 0;
 
     const createdOrder = await ordersController.createOrder({
       body: {
@@ -88,10 +165,28 @@ export class PaypalService {
             amount: {
               currencyCode: currency,
               value: amount.toString(),
+              ...(isItems && {
+                breakdown: {
+                  itemTotal: {
+                    currencyCode: currency,
+                    value: amount.toString(),
+                  },
+                },
+              }),
             },
             customId: sessionId,
+            ...(isItems && { items: paypalItems }),
+            ...(isShippingData && { shipping: paypalShipping }),
           },
         ],
+        applicationContext: {
+          ...(this.includeShippingData &&
+            isShippingData && {
+              shippingPreference:
+                OrderApplicationContextShippingPreference.SetProvidedAddress,
+            }),
+          userAction: OrderApplicationContextUserAction.PayNow,
+        },
       },
     });
 
