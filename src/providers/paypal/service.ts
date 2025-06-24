@@ -181,11 +181,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
     const currencyCode = input.data.currency_code as string;
     const orderId = paypalData?.id as string;
 
-    console.log(
-      "__________Authorize input data__________",
-      JSON.stringify(input, null, 2)
-    );
-
     if (!orderId) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
