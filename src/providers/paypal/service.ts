@@ -16,7 +16,6 @@ import {
   GetPaymentStatusOutput,
   InitiatePaymentInput,
   InitiatePaymentOutput,
-  IPaymentModuleService,
   Logger,
   RefundPaymentInput,
   RefundPaymentOutput,
@@ -27,7 +26,6 @@ import {
 import { CaptureStatus, Order } from "@paypal/paypal-server-sdk";
 import { WebhookPayload } from "./types";
 import { PaypalCreateOrderInput, PaypalService } from "./paypal-core";
-// import { EntityManager } from "@mikro-orm/knex";
 
 export interface PaypalPaymentError {
   code: string;
@@ -49,8 +47,6 @@ type Options = {
 type InjectedDependencies = {
   logger: Logger;
   paymentModuleService: any;
-  // entityManager: EntityManager;
-  // paymentModuleService: IPaymentModuleService;
 };
 
 interface InitiatePaymentInputCustom
@@ -67,9 +63,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   public options_: Options;
   public client: PaypalService;
   protected baseUrl: string;
-  // protected paymentModuleService_: IPaymentModuleService;
   protected paymentModuleService_: any;
-  // protected entityManager_: EntityManager;
 
   static validateOptions(options: Record<string, any>): void {
     if (!options.clientId) {
@@ -89,7 +83,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
 
   constructor(container: InjectedDependencies, options: Options) {
     super(container, options);
-    // console.log(">>>>>>>>>>>>>>>>Constructor Container", container);
     this.logger_ = container.logger;
     this.options_ = options;
     this.baseUrl = this.options_.isSandbox
@@ -104,14 +97,11 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
       includeShippingData: this.options_.includeShippingData,
       includeCustomerData: this.options_.includeCustomerData,
     });
-    // this.entityManager_ = container.entityManager;
   }
 
   async capturePayment(
     input: CapturePaymentInput
   ): Promise<CapturePaymentOutput> {
-    // console.log(">>>>> STEP 7 - CAPTURING PAYMENT INIT");
-
     try {
       if (!input.data) {
         throw new MedusaError(
@@ -140,10 +130,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
         };
       }
 
-      // console.log(
-      //   ">>>>>> STEP 8 - CAPTURE ORDER, IS AUTHORIZED, ATTEMPTING TO CAPTURE"
-      // );
-
       const id = input.data.id as string;
 
       await this.client.captureOrder(id);
@@ -164,8 +150,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   async authorizePayment(
     input: AuthorizePaymentInput
   ): Promise<AuthorizePaymentOutput> {
-    console.log(">>>>>>>Authorize payment<<<<<");
-
     if (!input.data) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -188,37 +172,17 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
       );
     }
 
-    // console.log(">>>>> STEP 2 - CHECK IF ALREADY AUTHORIZED");
-    // console.log(">>>>>> STEP 2.1 INPUT DATA", {
-    //   amount,
-    //   currencyCode,
-    //   orderId,
-    // });
     const alreadyAuthorized =
       paypalData?.purchaseUnits?.[0].payments?.captures?.[0]?.status ===
       CaptureStatus.Completed;
 
     if (!alreadyAuthorized) {
-      // console.log(
-      //   ">>>>> STEP 3 - CAPTURE ORDER, IS AUTHORIZED, ATTEMPTING TO CAPTURE ",
-      //   alreadyAuthorized
-      // );
-
       let captureResponse;
 
       try {
         captureResponse = await this.client.captureOrder(orderId);
       } catch (err) {
-        // console.log(
-        //   ">>>>>> STEP 3.1 - CAPTURE ORDER FAILED",
-        //   JSON.stringify(err, null, 2)
-        // );
         const body = JSON.parse(err?.body || "{}");
-
-        // console.log(
-        //   ">>>>>> STEP 3.2 - CAPTURE ORDER FAILED BODY",
-        //   JSON.stringify(err?.body || {}, null, 2)
-        // );
 
         const captureData = body?.purchase_units?.[0]?.payments?.captures?.[0];
 
@@ -280,10 +244,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
         processorResponse
       );
 
-      // console.log(">>>>> STEP 4 - CHECK PAYMENT STATUS", status, error);
-
       if (status === CaptureStatus.Declined) {
-        // console.log(">>>>> STEP 4.1 - PAYMENT DECLINED");
         const newOrder = await this.client.createOrder({
           amount: Number(captureData?.amount?.value),
           currency: captureData?.amount?.currencyCode!,
@@ -292,24 +253,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
           shipping_info: data?.shipping_info,
           email: data?.email,
         });
-
-        // console.log(">>>>> STEP 4.2 - NEW ORDER CREATED", newOrder);
-
-        console.log(
-          ">>>>> STEP 4.3 - RETURNING DECLINED PAYMENT DATA",
-          JSON.stringify(
-            {
-              status: PaymentSessionStatus.PENDING,
-              data: {
-                ...input.data,
-                ...newOrder,
-                error,
-              },
-            },
-            null,
-            2
-          )
-        );
 
         return {
           status: PaymentSessionStatus.PENDING,
@@ -322,8 +265,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
       }
     }
 
-    // console.log(">>>>> STEP 5 - RETURN AUTHORIZED PAYMENT DATA");
-
     return {
       data: {
         ...paypalData,
@@ -333,7 +274,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   }
 
   async cancelPayment(input: CancelPaymentInput): Promise<CancelPaymentOutput> {
-    console.log("??????????>>>>>Cancel payment<<<<<", input);
     try {
       if (!input.data) {
         throw new MedusaError(
@@ -391,8 +331,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   }
 
   async refundPayment(input: RefundPaymentInput): Promise<RefundPaymentOutput> {
-    // console.log(">>>>>>>Refund payment<<<<<");
-
     try {
       if (!input.data) {
         throw new MedusaError(
@@ -431,9 +369,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   }
 
   async deletePayment(input: DeletePaymentInput): Promise<DeletePaymentOutput> {
-    // console.log(">>>>>>>Delete payment<<<<<");
-    // console.log("Delete payment input", input);
-
     try {
       if (!input.data) {
         throw new MedusaError(
@@ -444,20 +379,12 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
 
       const orderId = input.data["id"] as string;
 
-      // //@ts-ignore
-      // const captureIds = input.data.captureData.purchaseUnits.flatMap((item) =>
-      //   item.payments.captures.map((capture) => capture.id)
-      // );
-
-      // if (!orderId || !captureIds)
       if (!orderId) {
         throw new MedusaError(
           MedusaError.Types.INVALID_DATA,
           "Delete payment failed! PayPal order ID and capture ID is required to cancel payment"
         );
       }
-
-      // await this.client.cancelPayment(captureIds);
 
       return {
         data: {
@@ -475,7 +402,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   async getPaymentStatus(
     input: GetPaymentStatusInput
   ): Promise<GetPaymentStatusOutput> {
-    // console.log(">>>>>>>Get payment status<<<<<");
     try {
       if (!input.data) {
         throw new MedusaError(
@@ -515,8 +441,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   }
 
   async retrievePayment(input: Record<string, unknown>) {
-    // console.log(">>>>>>>Retrieve payment <<<<<");
-
     try {
       const id = input["id"] as string;
 
@@ -531,8 +455,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
   }
 
   async updatePayment(input: UpdatePaymentInput): Promise<UpdatePaymentOutput> {
-    // console.log(">>>>>>>Update payment<<<<<");
-
     throw new MedusaError(MedusaError.Types.INVALID_DATA, "Not implemented");
     // try {
     //   if (!input.data) {
@@ -603,7 +525,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
 
       switch (data.event_type) {
         case "PAYMENT.CAPTURE.COMPLETED":
-          // console.log(">>>>> STEP 6 PAYMENT.CAPTURE.COMPLETED<<<<<");
           return {
             action: "captured",
             data: {
@@ -677,15 +598,11 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
       },
     };
 
-    // Check the payment status first
     switch (status) {
       case "COMPLETED":
         return { status };
 
       case "DECLINED":
-        // If we have processor response details, use them
-        console.log("Processor response details:", processorResponse);
-
         if (processorResponse?.responseCode) {
           const errorDetails = processorResponseMap[
             processorResponse.responseCode
@@ -705,7 +622,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
             },
           };
         }
-        // Generic decline if no processor response
+
         return {
           status,
           error: {
