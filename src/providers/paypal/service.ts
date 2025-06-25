@@ -456,63 +456,6 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Options
 
   async updatePayment(input: UpdatePaymentInput): Promise<UpdatePaymentOutput> {
     throw new MedusaError(MedusaError.Types.INVALID_DATA, "Not implemented");
-    // try {
-    //   if (!input.data) {
-    //     throw new MedusaError(
-    //       MedusaError.Types.INVALID_DATA,
-    //       "Payment data is required"
-    //     );
-    //   }
-
-    //   const order_id = input.data["order_id"] as string;
-
-    //   if (!order_id) {
-    //     throw new MedusaError(
-    //       MedusaError.Types.INVALID_DATA,
-    //       "PayPal order ID is required to cancel payment"
-    //     );
-    //   }
-
-    //   const accessToken = await this.getAccessToken();
-
-    //   const response = await fetch(``, {
-    //     method: "PATCH",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //       Authorization: `Bearer ${accessToken}`,
-    //     },
-    //     body: JSON.stringify([
-    //       {
-    //         op: "replace",
-    //         value: {
-    //           address_line_1: "2211 N First Street",
-    //           address_line_2: "Building 17",
-    //           admin_area_2: "San Jose",
-    //           admin_area_1: "CA",
-    //           postal_code: "95131",
-    //           country_code: "US",
-    //         },
-    //       },
-    //     ]),
-    //   });
-
-    //   if (!response.ok) {
-    //     const errorData = await response.json();
-    //     throw new MedusaError(
-    //       MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-    //       `PayPal update failed: ${errorData.message}`
-    //     );
-    //   }
-
-    //   const data = await response.json();
-
-    //   return {
-    //     data: { success: true, message: "payment updated", ...data },
-    //   };
-    // } catch (error) {
-    //   this.logger_.error("PayPal update payment error:", error);
-    //   throw error;
-    // }
   }
 
   async getWebhookActionAndData(
