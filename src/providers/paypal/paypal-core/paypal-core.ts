@@ -19,15 +19,6 @@ import axios, { AxiosInstance } from "axios";
 import { CartAddressDTO, CartLineItemDTO } from "@medusajs/framework/types";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 
-interface CartItem {
-  name: string;
-  thumbnail?: string;
-  variant_title?: string;
-  product_id?: string;
-  variant_id?: string;
-  quantity: number;
-}
-
 export interface PaypalCreateOrderInput {
   amount: number;
   currency: string;
@@ -64,9 +55,7 @@ export class PaypalService {
     includeShippingData?: boolean;
     includeCustomerData?: boolean;
   }) {
-    const environment = isSandbox
-      ? Environment.Sandbox
-      : Environment.Production;
+    const environment = isSandbox ? Environment.Sandbox : Environment.Production;
 
     this.client = new Client({
       clientCredentialsAuthCredentials: {
@@ -87,9 +76,7 @@ export class PaypalService {
     });
 
     this.axios = axios.create({
-      baseURL: isSandbox
-        ? "https://api-m.sandbox.paypal.com"
-        : "https://api-m.paypal.com",
+      baseURL: isSandbox ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com",
     });
     this.clientIdEnv = clientId;
     this.clientSecretEnv = clientSecret;
@@ -102,6 +89,10 @@ export class PaypalService {
     this.includeCustomerData = includeCustomerData;
     this.includeShippingData = includeShippingData;
   }
+
+  private extractCustomerData() {}
+
+  private extractShippingData() {}
 
   async createOrder({
     amount,
@@ -125,9 +116,7 @@ export class PaypalService {
       : [];
     const isItems = paypalItems.length > 0;
 
-    const parsed_phone_number = shipping_info?.phone
-      ? parsePhoneNumberFromString(shipping_info.phone)
-      : null;
+    const parsed_phone_number = shipping_info?.phone ? parsePhoneNumberFromString(shipping_info.phone) : null;
 
     const paypalShipping: ShippingDetails = shipping_info
       ? {
@@ -155,6 +144,7 @@ export class PaypalService {
           type: FulfillmentType.Shipping,
         }
       : {};
+
     const isShippingData = Object.keys(paypalShipping).length > 0;
 
     const createdOrder = await ordersController.createOrder({
@@ -182,8 +172,7 @@ export class PaypalService {
         applicationContext: {
           ...(this.includeShippingData &&
             isShippingData && {
-              shippingPreference:
-                OrderApplicationContextShippingPreference.SetProvidedAddress,
+              shippingPreference: OrderApplicationContextShippingPreference.SetProvidedAddress,
             }),
           userAction: OrderApplicationContextUserAction.PayNow,
         },
@@ -197,9 +186,7 @@ export class PaypalService {
 
   async getAccessToken(): Promise<string> {
     try {
-      const authorization = Buffer.from(
-        `${this.clientIdEnv}:${this.clientSecretEnv}`
-      ).toString("base64");
+      const authorization = Buffer.from(`${this.clientIdEnv}:${this.clientSecretEnv}`).toString("base64");
 
       const authRes = await this.authController.requestToken({
         authorization: `Basic ${authorization}`,
@@ -231,7 +218,7 @@ export class PaypalService {
     return capturedOrder.result;
   }
 
-  async cancelPayment(captureIds: string[]): Promise<Refund[]> {
+  async refundPayment(captureIds: string[]): Promise<Refund[]> {
     const refunds: Refund[] = [];
 
     for (const captureId of captureIds) {
