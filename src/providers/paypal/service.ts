@@ -56,15 +56,15 @@ interface AuthorizePaymentInputData extends Pick<PaypalCreateOrderInput, "items"
 
 export default class PaypalModuleService extends AbstractPaymentProvider<AlphabitePaypalPluginOptions> {
   static identifier = "paypal";
-  protected logger: Logger;
+
   protected client: PaypalService;
+  protected logger: Logger;
   protected paymentModuleService: any;
 
   constructor(container: InjectedDependencies, private readonly options: AlphabitePaypalPluginOptions) {
     super(container, options);
 
     this.logger = container.logger;
-
     this.paymentModuleService = container.paymentModuleService;
 
     this.client = new PaypalService(this.options);
@@ -136,14 +136,11 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Alphabi
       );
     }
 
-    const alreadyAuthorized =
-      paypalData?.purchaseUnits?.[0].payments?.captures?.[0]?.status === CaptureStatus.Completed;
+    const isAuthorized = paypalData?.purchaseUnits?.[0].payments?.captures?.[0]?.status === CaptureStatus.Completed;
 
-    if (!alreadyAuthorized) {
-      let captureResponse: Order | undefined;
-
+    if (!isAuthorized) {
       try {
-        captureResponse = await this.client.captureOrder(orderId);
+        paypalData = await this.client.captureOrder(orderId);
       } catch (err) {
         const body = JSON.parse(err?.body || "{}");
 
@@ -190,9 +187,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Alphabi
         };
       }
 
-      paypalData = captureResponse;
-
-      const captureData = captureResponse.purchaseUnits?.[0].payments?.captures?.[0];
+      const captureData = paypalData.purchaseUnits?.[0].payments?.captures?.[0];
 
       const paymentStatus = captureData?.status || CaptureStatus.Declined;
       const processorResponse = captureData?.processorResponse;
