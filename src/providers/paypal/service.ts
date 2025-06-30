@@ -129,15 +129,18 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Alphabi
     const currencyCode = input.data.currency_code as string;
     const orderId = paypalData?.id as string;
 
-    if (!orderId) {
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, "PayPal order ID is required to capture payment");
+    if (!orderId || !amount || !currencyCode) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        "PayPal order ID, Amount or Currency is missing, can not capture order."
+      );
     }
 
     const alreadyAuthorized =
       paypalData?.purchaseUnits?.[0].payments?.captures?.[0]?.status === CaptureStatus.Completed;
 
     if (!alreadyAuthorized) {
-      let captureResponse;
+      let captureResponse: Order | undefined;
 
       try {
         captureResponse = await this.client.captureOrder(orderId);
@@ -175,7 +178,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Alphabi
         const paymentStatus = captureData?.status || CaptureStatus.Declined;
         const processorResponse = captureData?.processorResponse;
 
-        const { status, error = undefined } = this.checkPaymentStatus(paymentStatus, processorResponse);
+        const { error = undefined } = this.checkPaymentStatus(paymentStatus, processorResponse);
 
         return {
           status: PaymentSessionStatus.PENDING,
@@ -362,7 +365,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Alphabi
         throw new MedusaError(MedusaError.Types.INVALID_DATA, "PayPal order ID is required to cancel payment");
       }
 
-      const order = await this.client.getOrderDetails(order_id);
+      const order = await this.client.retrieveOrder(order_id);
 
       if (!order || !order.status) {
         throw new MedusaError(MedusaError.Types.NOT_FOUND, `PayPal order with ID ${order_id} not found`);
@@ -381,7 +384,7 @@ export default class PaypalModuleService extends AbstractPaymentProvider<Alphabi
     try {
       const id = input["id"] as string;
 
-      const res = await this.client.getOrderDetails(id);
+      const res = await this.client.retrieveOrder(id);
       return {
         data: { response: res },
       };
