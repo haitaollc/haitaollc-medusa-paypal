@@ -15,9 +15,9 @@ import {
   OrderApplicationContextUserAction,
   FulfillmentType,
 } from "@paypal/paypal-server-sdk";
-import axios, { AxiosInstance } from "axios";
 import { CartAddressDTO, CartLineItemDTO } from "@medusajs/framework/types";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { AlphabitePaypalPluginOptions } from "../service";
 
 export interface PaypalCreateOrderInput {
   amount: number;
@@ -33,28 +33,21 @@ export class PaypalService {
   private ordersController: OrdersController;
   private paymentsController: PaymentsController;
   private authController: OAuthAuthorizationController;
-  private axios: AxiosInstance;
-  private clientIdEnv: string;
-  private clientSecretEnv: string;
-  private paypalWebhookIdEnv: string | undefined;
+  private clientId: string;
+  private clientSecret: string;
+  private webhookId: string | undefined;
   private includeShippingData: boolean | undefined;
   private includeCustomerData: boolean | undefined;
+  private baseUrl: string;
 
   constructor({
     clientId,
     clientSecret,
     isSandbox,
-    paypalWebhookId,
+    webhookId,
     includeCustomerData,
     includeShippingData,
-  }: {
-    clientId: string;
-    clientSecret: string;
-    isSandbox: boolean;
-    paypalWebhookId?: string;
-    includeShippingData?: boolean;
-    includeCustomerData?: boolean;
-  }) {
+  }: AlphabitePaypalPluginOptions) {
     const environment = isSandbox ? Environment.Sandbox : Environment.Production;
 
     this.client = new Client({
@@ -75,12 +68,11 @@ export class PaypalService {
       },
     });
 
-    this.axios = axios.create({
-      baseURL: isSandbox ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com",
-    });
-    this.clientIdEnv = clientId;
-    this.clientSecretEnv = clientSecret;
-    this.paypalWebhookIdEnv = paypalWebhookId;
+    this.baseUrl = isSandbox ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com";
+
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
+    this.webhookId = webhookId;
 
     this.ordersController = new OrdersController(this.client);
     this.paymentsController = new PaymentsController(this.client);
@@ -186,7 +178,7 @@ export class PaypalService {
 
   async getAccessToken(): Promise<string> {
     try {
-      const authorization = Buffer.from(`${this.clientIdEnv}:${this.clientSecretEnv}`).toString("base64");
+      const authorization = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64");
 
       const authRes = await this.authController.requestToken({
         authorization: `Basic ${authorization}`,
@@ -249,29 +241,33 @@ export class PaypalService {
   }): Promise<{ body: object; status: "SUCCESS" | "FAILURE" }> => {
     const accessToken = await this.getAccessToken();
 
-    const verifyWebhookRes = await this.axios.post(
-      "/v1/notifications/verify-webhook-signature",
-      {
+    const verifyWebhookRes = await fetch(`${this.baseUrl}/v1/notifications/verify-webhook-signature`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         auth_algo: headers["paypal-auth-algo"],
         cert_url: headers["paypal-cert-url"],
         transmission_id: headers["paypal-transmission-id"],
         transmission_sig: headers["paypal-transmission-sig"],
         transmission_time: headers["paypal-transmission-time"],
-        webhook_id: this.paypalWebhookIdEnv || "",
+        webhook_id: this.webhookId || "",
         webhook_event: body,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+      }),
+    });
 
-    if (verifyWebhookRes.data.verification_status !== "SUCCESS") {
+    if (!verifyWebhookRes.ok) {
+      throw new Error(`Failed to verify webhook signature: ${verifyWebhookRes.statusText}`);
+    }
+
+    const verifyWebhookData = await verifyWebhookRes.json();
+
+    if (verifyWebhookData.verification_status !== "SUCCESS") {
       throw new Error("Failed to verify webhook signature");
     }
 
-    return { status: verifyWebhookRes.data.verification_status, body };
+    return { status: verifyWebhookData.verification_status, body };
   };
 }
