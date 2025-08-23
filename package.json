@@ -16,14 +16,13 @@
       "import": "./.medusa/server/src/admin/index.mjs",
       "require": "./.medusa/server/src/admin/index.js",
       "default": "./.medusa/server/src/admin/index.js"
-    }
-  },
-  ".": {
+    },
+    ".": {
     "import": "./.medusa/server/src/providers/paypal/service.js",
     "require": "./.medusa/server/src/providers/paypal/service.js",
     "default": "./.medusa/server/src/providers/paypal/service.js"
-  }
-}
+    }
+  },
   "keywords": [
     "medusa-paypal",
     "medusa-paypal-plugin",
