@@ -54,7 +54,7 @@ interface InitiatePaymentInputCustom extends Omit<InitiatePaymentInput, "data"> 
 
 interface AuthorizePaymentInputData extends Pick<PaypalCreateOrderInput, "items" | "shipping_info" | "email"> {}
 
-export default class PaypalModuleService extends AbstractPaymentProvider<AlphabitePaypalPluginOptions> {
+export class PaypalModuleService extends AbstractPaymentProvider<AlphabitePaypalPluginOptions> {
   static identifier = "paypal";
 
   protected client: PaypalService;
