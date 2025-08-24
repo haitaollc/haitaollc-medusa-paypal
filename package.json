@@ -18,9 +18,9 @@
       "default": "./.medusa/server/src/admin/index.js"
     },
     ".": {
-    "import": "./.medusa/server/src/providers/paypal/service.js",
-    "require": "./.medusa/server/src/providers/paypal/service.js",
-    "default": "./.medusa/server/src/providers/paypal/service.js"
+      "import": "./.medusa/server/src/providers/paypal/index.js",
+      "require": "./.medusa/server/src/providers/paypal/index.js",
+      "default": "./.medusa/server/src/providers/paypal/index.js"
     }
   },
   "keywords": [
